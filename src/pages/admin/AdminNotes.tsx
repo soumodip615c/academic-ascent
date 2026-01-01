@@ -274,6 +274,9 @@ const AdminNotes = () => {
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-primary hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
                     >
                       <FileText className="w-3.5 h-3.5" />
                       View PDF
