@@ -11,16 +11,21 @@ import {
   X,
   UserPlus,
   FileUp,
-  ClipboardList
+  ClipboardList,
+  Key
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import logo from "@/assets/logo.jpeg";
 import { useStudents } from "@/hooks/useStudents";
 import { useNotes } from "@/hooks/useNotes";
 import { useLectures } from "@/hooks/useLectures";
 import { useExams } from "@/hooks/useExams";
 import { useFees } from "@/hooks/useFees";
+import { useUniversalPassword, useUpdateSetting } from "@/hooks/useSettings";
+import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
@@ -136,11 +141,15 @@ const AdminDashboard = () => {
 
 // Admin Overview Component
 export const AdminOverview = () => {
+  const { toast } = useToast();
   const { data: students = [] } = useStudents();
   const { data: notes = [] } = useNotes();
   const { data: lectures = [] } = useLectures();
   const { data: exams = [] } = useExams();
   const { data: fees = [] } = useFees();
+  const { data: universalPassword = "123456" } = useUniversalPassword();
+  const updateSetting = useUpdateSetting();
+  const [newPassword, setNewPassword] = useState("");
 
   const pendingPayments = fees.filter((f) => f.status === "pending").length;
   const activeExams = exams.filter((e) => e.status === "active" || e.status === "available").length;
@@ -158,11 +167,78 @@ export const AdminOverview = () => {
     { title: "Create Exam", icon: ClipboardList, url: "/admin/exams" },
   ];
 
+  const handleUpdatePassword = async () => {
+    if (!newPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a new password",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await updateSetting.mutateAsync({ 
+        key: "universal_access_password", 
+        value: newPassword 
+      });
+      toast({
+        title: "Success",
+        description: "Student access password updated successfully!",
+      });
+      setNewPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <h2 className="text-2xl font-bold text-foreground mb-6 font-heading">
         Dashboard Overview
       </h2>
+
+      {/* Universal Access Password Card */}
+      <div className="card-education mb-8 border-2 border-primary/20">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="feature-icon-orange">
+            <Key className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Student Access Password</h3>
+            <p className="text-sm text-muted-foreground">
+              This universal password is required for all students to access their dashboard
+            </p>
+          </div>
+        </div>
+        
+        <div className="bg-muted/50 rounded-lg p-3 mb-4">
+          <p className="text-sm text-muted-foreground">Current Password:</p>
+          <p className="font-mono text-lg font-bold text-primary">{universalPassword}</p>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Label htmlFor="newPassword" className="sr-only">New Password</Label>
+            <Input
+              id="newPassword"
+              placeholder="Enter new access password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <Button 
+            onClick={handleUpdatePassword}
+            disabled={updateSetting.isPending}
+          >
+            {updateSetting.isPending ? "Updating..." : "Update Password"}
+          </Button>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

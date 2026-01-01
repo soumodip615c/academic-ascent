@@ -20,12 +20,33 @@ const StudentAccess = () => {
     setIsLoading(true);
 
     try {
-      // Verify access password against the database
+      // First, get the universal access password from settings
+      const { data: passwordSetting, error: passwordError } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "universal_access_password")
+        .maybeSingle();
+
+      if (passwordError) throw passwordError;
+
+      const universalPassword = passwordSetting?.value || "123456";
+
+      // Verify the access code matches the universal password
+      if (accessCode !== universalPassword) {
+        toast({
+          title: "Access Denied",
+          description: "Invalid access password. Please contact your teacher.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Now verify the student exists and is active
       const { data: student, error } = await supabase
         .from("students")
         .select("*")
         .eq("email", email)
-        .eq("access_password", accessCode)
         .eq("is_active", true)
         .maybeSingle();
 
@@ -33,8 +54,8 @@ const StudentAccess = () => {
 
       if (!student) {
         toast({
-          title: "Access Denied",
-          description: "Invalid email or access password. Please try again.",
+          title: "Student Not Found",
+          description: "No active student found with this email. Please register first.",
           variant: "destructive"
         });
         setIsLoading(false);
