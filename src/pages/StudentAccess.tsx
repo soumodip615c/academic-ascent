@@ -5,27 +5,76 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const StudentAccess = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [accessCode, setAccessCode] = useState("");
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Navigate to student dashboard
-    navigate("/dashboard");
+    setIsLoading(true);
+
+    try {
+      // Verify access password against the database
+      const { data: student, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("email", email)
+        .eq("access_password", accessCode)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!student) {
+        toast({
+          title: "Access Denied",
+          description: "Invalid email or access password. Please try again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Store student data in session for dashboard
+      sessionStorage.setItem("studentId", student.id);
+      sessionStorage.setItem("studentName", student.name);
+      sessionStorage.setItem("studentCourse", student.course);
+      sessionStorage.setItem("studentEmail", student.email);
+      sessionStorage.setItem("studentRollNo", student.roll_no);
+
+      toast({
+        title: "Welcome back!",
+        description: `Hello ${student.name}, you're now logged in.`,
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-education-blue-light px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         {/* Back Link */}
         <Link 
-          to="/student-login" 
+          to="/" 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Login
+          Back to Home
         </Link>
 
         <Card className="shadow-card">
@@ -39,12 +88,25 @@ const StudentAccess = () => {
               Student Entry Access
             </h1>
             <p className="text-muted-foreground mt-2">
-              This access password is provided by your teacher.
+              Enter your email and access password provided by your teacher.
             </p>
           </CardHeader>
 
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-12"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="accessCode">Access Password</Label>
                 <Input
@@ -58,13 +120,21 @@ const StudentAccess = () => {
                 />
               </div>
 
-              <Button type="submit" size="lg" className="w-full h-12">
-                Enter Dashboard
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="w-full h-12"
+                disabled={isLoading || !email || !accessCode}
+              >
+                {isLoading ? "Verifying..." : "Enter Dashboard"}
               </Button>
             </form>
 
             <p className="text-sm text-muted-foreground text-center mt-6">
-              Don't have the access password? Contact your teacher.
+              Don't have an account?{" "}
+              <Link to="/student-login" className="text-education-blue hover:underline">
+                Register here
+              </Link>
             </p>
           </CardContent>
         </Card>
