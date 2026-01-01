@@ -41,11 +41,12 @@ const features = [
 ];
 
 const Dashboard = () => {
-  // Mock student data
-  const student = {
-    name: "Rahul Kumar",
-    course: "BCA - Semester 3",
-    rollNo: "SCW2024001",
+  // Get student data from session storage (set during login)
+  const studentData = sessionStorage.getItem("student");
+  const student = studentData ? JSON.parse(studentData) : {
+    name: "Student",
+    course: "Course",
+    roll_no: "N/A",
   };
 
   return (
@@ -63,8 +64,9 @@ const Dashboard = () => {
               </h1>
               <p className="text-muted-foreground">
                 <span className="font-medium text-foreground">{student.course}</span>
+                {student.semester && <span> - {student.semester}</span>}
                 <span className="mx-2">•</span>
-                Roll No: {student.rollNo}
+                Roll No: {student.roll_no}
               </p>
             </div>
           </div>

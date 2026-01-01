@@ -16,6 +16,11 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.jpeg";
+import { useStudents } from "@/hooks/useStudents";
+import { useNotes } from "@/hooks/useNotes";
+import { useLectures } from "@/hooks/useLectures";
+import { useExams } from "@/hooks/useExams";
+import { useFees } from "@/hooks/useFees";
 
 const navItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
@@ -131,11 +136,20 @@ const AdminDashboard = () => {
 
 // Admin Overview Component
 export const AdminOverview = () => {
+  const { data: students = [] } = useStudents();
+  const { data: notes = [] } = useNotes();
+  const { data: lectures = [] } = useLectures();
+  const { data: exams = [] } = useExams();
+  const { data: fees = [] } = useFees();
+
+  const pendingPayments = fees.filter((f) => f.status === "pending").length;
+  const activeExams = exams.filter((e) => e.status === "active" || e.status === "available").length;
+
   const stats = [
-    { title: "Total Students", value: "24", icon: Users, color: "blue" },
-    { title: "Active Courses", value: "3", icon: BookOpen, color: "teal" },
-    { title: "Pending Payments", value: "8", icon: CreditCard, color: "orange" },
-    { title: "Exams This Month", value: "5", icon: FileText, color: "purple" },
+    { title: "Total Students", value: students.length.toString(), icon: Users, color: "blue" },
+    { title: "Notes Uploaded", value: notes.length.toString(), icon: BookOpen, color: "teal" },
+    { title: "Pending Payments", value: pendingPayments.toString(), icon: CreditCard, color: "orange" },
+    { title: "Active Exams", value: activeExams.toString(), icon: FileText, color: "purple" },
   ];
 
   const quickActions = [
