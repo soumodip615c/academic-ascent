@@ -5,20 +5,74 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAddStudent } from "@/hooks/useStudents";
+import { useToast } from "@/hooks/use-toast";
+
+const COURSES = [
+  "BCA",
+  "MCA", 
+  "Class 10",
+  "Class 12",
+  "AI & ML",
+  "Web Development",
+  "Python Programming"
+];
 
 const StudentLogin = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const addStudent = useAddStudent();
+  
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [course, setCourse] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For now, navigate to student access page
-    navigate("/student-access");
+    setIsLoading(true);
+
+    try {
+      // Generate a roll number
+      const rollNo = `SCW${Date.now().toString().slice(-6)}`;
+      
+      await addStudent.mutateAsync({
+        name,
+        email,
+        course,
+        phone: phone || null,
+        roll_no: rollNo,
+        semester: null,
+        access_password: "123456", // Default password
+        is_active: true
+      });
+
+      toast({
+        title: "Registration Successful!",
+        description: "You can now login with your access password.",
+      });
+
+      // Store student info in session for dashboard
+      sessionStorage.setItem("studentName", name);
+      sessionStorage.setItem("studentCourse", course);
+      sessionStorage.setItem("studentEmail", email);
+
+      navigate("/student-access");
+    } catch (error: any) {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-education-blue-light px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         {/* Back Link */}
         <Link 
@@ -37,15 +91,28 @@ const StudentLogin = () => {
             </div>
             
             <h1 className="text-2xl font-bold text-foreground font-heading">
-              Student Login
+              Student Registration
             </h1>
             <p className="text-muted-foreground mt-2">
-              Welcome back. Please login to continue learning.
+              Register to start your learning journey.
             </p>
           </CardHeader>
 
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="h-12"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input
@@ -60,20 +127,38 @@ const StudentLogin = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="course">Select Course</Label>
+                <Select value={course} onValueChange={setCourse} required>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Choose your course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COURSES.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number (Optional)</Label>
                 <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
+                  id="phone"
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="h-12"
                 />
               </div>
 
-              <Button type="submit" size="lg" className="w-full h-12">
-                Login
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="w-full h-12"
+                disabled={isLoading || !name || !email || !course}
+              >
+                {isLoading ? "Registering..." : "Register & Continue"}
               </Button>
             </form>
           </CardContent>
