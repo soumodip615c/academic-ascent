@@ -1,16 +1,65 @@
+import { useMemo, useState } from "react";
 import { BookOpen, Download, Eye, Calendar, FileText } from "lucide-react";
 import StudentLayout from "@/components/StudentLayout";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useNotes } from "@/hooks/useNotes";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 const Notes = () => {
   const { data: notes = [], isLoading } = useNotes();
 
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>("PDF Preview");
+
+  const parsePublicStorageUrl = useMemo(() => {
+    return (url: string): { bucket: string; path: string } | null => {
+      try {
+        const u = new URL(url);
+        const marker = "/storage/v1/object/public/";
+        const idx = u.pathname.indexOf(marker);
+        if (idx === -1) return null;
+        const rest = u.pathname.substring(idx + marker.length);
+        const [bucket, ...pathParts] = rest.split("/");
+        const path = pathParts.join("/");
+        if (!bucket || !path) return null;
+        return { bucket, path };
+      } catch {
+        return null;
+      }
+    };
+  }, []);
+
+  const openPreview = (url: string, title: string) => {
+    setPreviewUrl(url);
+    setPreviewTitle(title);
+    setIsPreviewOpen(true);
+  };
+
   const handleDownload = async (url: string, title: string) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
+      const storageRef = parsePublicStorageUrl(url);
+      const blob = storageRef
+        ? await (async () => {
+            const { data, error } = await supabase.storage
+              .from(storageRef.bucket)
+              .download(storageRef.path);
+            if (error) throw error;
+            return data;
+          })()
+        : await (async () => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Download failed");
+            return await response.blob();
+          })();
+
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -19,18 +68,9 @@ const Notes = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      // Fallback: open in new tab
-      window.open(url, "_blank");
-    }
-  };
-
-  const handleView = (url: string) => {
-    // For PDFs, we can use Google Docs viewer for better compatibility
-    if (url.includes(".pdf")) {
-      window.open(url, "_blank");
-    } else {
-      window.open(url, "_blank");
+    } catch {
+      // If downloads/popups are blocked in embedded previews, at least show the preview.
+      openPreview(url, title);
     }
   };
 
@@ -51,6 +91,22 @@ const Notes = () => {
             Below are the study materials for your course.
           </p>
         </div>
+
+        {/* Preview Dialog (works even when new tabs are blocked) */}
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+          <DialogContent className="sm:max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{previewTitle}</DialogTitle>
+            </DialogHeader>
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                title={previewTitle}
+                className="w-full h-[70vh] rounded-md border border-border"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Loading State */}
         {isLoading && (
@@ -75,9 +131,7 @@ const Notes = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <FileText className="w-4 h-4 text-primary" />
-                    <h3 className="font-semibold text-foreground">
-                      {note.title}
-                    </h3>
+                    <h3 className="font-semibold text-foreground">{note.title}</h3>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="px-2 py-0.5 bg-muted rounded-md">
@@ -92,7 +146,9 @@ const Notes = () => {
                     </span>
                   </div>
                   {note.description && (
-                    <p className="text-sm text-muted-foreground mt-2">{note.description}</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {note.description}
+                    </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -102,7 +158,7 @@ const Notes = () => {
                         variant="outline"
                         size="sm"
                         className="gap-2"
-                        onClick={() => handleView(note.file_url!)}
+                        onClick={() => openPreview(note.file_url!, note.title)}
                       >
                         <Eye className="w-4 h-4" />
                         View

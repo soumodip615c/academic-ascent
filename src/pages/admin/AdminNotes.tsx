@@ -1,5 +1,15 @@
-import { useState, useRef } from "react";
-import { BookOpen, Plus, Calendar, MoreVertical, Upload, FileText, Link as LinkIcon } from "lucide-react";
+import { useMemo, useState, useRef } from "react";
+import {
+  BookOpen,
+  Plus,
+  Calendar,
+  MoreVertical,
+  Upload,
+  FileText,
+  Link as LinkIcon,
+  Download,
+  Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +39,11 @@ const AdminNotes = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>("PDF Preview");
+
   const [formData, setFormData] = useState({
     title: "",
     subject: "",
@@ -40,6 +55,60 @@ const AdminNotes = () => {
   const { data: notes = [], isLoading } = useNotes();
   const addNote = useAddNote();
   const deleteNote = useDeleteNote();
+
+  const parsePublicStorageUrl = useMemo(() => {
+    return (url: string): { bucket: string; path: string } | null => {
+      try {
+        const u = new URL(url);
+        const marker = "/storage/v1/object/public/";
+        const idx = u.pathname.indexOf(marker);
+        if (idx === -1) return null;
+        const rest = u.pathname.substring(idx + marker.length);
+        const [bucket, ...pathParts] = rest.split("/");
+        const path = pathParts.join("/");
+        if (!bucket || !path) return null;
+        return { bucket, path };
+      } catch {
+        return null;
+      }
+    };
+  }, []);
+
+  const openPreview = (url: string, title: string) => {
+    setPreviewUrl(url);
+    setPreviewTitle(title);
+    setIsPreviewOpen(true);
+  };
+
+  const handleDownload = async (url: string, title: string) => {
+    try {
+      const storageRef = parsePublicStorageUrl(url);
+      const blob = storageRef
+        ? await (async () => {
+            const { data, error } = await supabase.storage
+              .from(storageRef.bucket)
+              .download(storageRef.path);
+            if (error) throw error;
+            return data;
+          })()
+        : await (async () => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Download failed");
+            return await response.blob();
+          })();
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `${title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch {
+      openPreview(url, title);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,16 +128,16 @@ const AdminNotes = () => {
   const uploadFile = async (file: File): Promise<string> => {
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from("notes")
-      .upload(fileName, file);
+      .upload(fileName, file, { contentType: "application/pdf" });
 
     if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("notes")
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("notes").getPublicUrl(fileName);
 
     return publicUrl;
   };
@@ -128,10 +197,9 @@ const AdminNotes = () => {
           <div className="feature-icon-blue">
             <BookOpen className="w-5 h-5" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground font-heading">
-            Notes
-          </h2>
+          <h2 className="text-2xl font-bold text-foreground font-heading">Notes</h2>
         </div>
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -188,7 +256,7 @@ const AdminNotes = () => {
                 </TabsList>
                 <TabsContent value="file" className="space-y-2">
                   <Label>PDF File</Label>
-                  <div 
+                  <div
                     className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -207,9 +275,7 @@ const AdminNotes = () => {
                     ) : (
                       <>
                         <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Click to upload PDF (max 20MB)
-                        </p>
+                        <p className="text-sm text-muted-foreground">Click to upload PDF (max 20MB)</p>
                       </>
                     )}
                   </div>
@@ -242,6 +308,22 @@ const AdminNotes = () => {
         </Dialog>
       </div>
 
+      {/* Preview Dialog (works even when new tabs are blocked) */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{previewTitle}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              title={previewTitle}
+              className="w-full h-[70vh] rounded-md border border-border"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Loading State */}
       {isLoading && (
         <div className="space-y-3">
@@ -268,19 +350,36 @@ const AdminNotes = () => {
                     <Calendar className="w-3.5 h-3.5" />
                     {format(new Date(note.uploaded_at), "MMM d, yyyy")}
                   </span>
+
                   {note.file_url && (
-                    <a 
-                      href={note.file_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-primary hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      View PDF
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPreview(note.file_url!, note.title);
+                        }}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(note.file_url!, note.title);
+                        }}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
