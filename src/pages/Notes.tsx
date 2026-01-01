@@ -1,4 +1,4 @@
-import { BookOpen, Download, Eye, Calendar } from "lucide-react";
+import { BookOpen, Download, Eye, Calendar, FileText } from "lucide-react";
 import StudentLayout from "@/components/StudentLayout";
 import { Button } from "@/components/ui/button";
 import { useNotes } from "@/hooks/useNotes";
@@ -6,6 +6,33 @@ import { format } from "date-fns";
 
 const Notes = () => {
   const { data: notes = [], isLoading } = useNotes();
+
+  const handleDownload = async (url: string, title: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `${title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      // Fallback: open in new tab
+      window.open(url, "_blank");
+    }
+  };
+
+  const handleView = (url: string) => {
+    // For PDFs, we can use Google Docs viewer for better compatibility
+    if (url.includes(".pdf")) {
+      window.open(url, "_blank");
+    } else {
+      window.open(url, "_blank");
+    }
+  };
 
   return (
     <StudentLayout>
@@ -46,9 +73,12 @@ const Notes = () => {
                 className="card-education flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="flex-1">
-                  <h3 className="font-semibold text-foreground mb-1">
-                    {note.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="w-4 h-4 text-primary" />
+                    <h3 className="font-semibold text-foreground">
+                      {note.title}
+                    </h3>
+                  </div>
                   <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="px-2 py-0.5 bg-muted rounded-md">
                       {note.subject}
@@ -61,6 +91,9 @@ const Notes = () => {
                       {format(new Date(note.uploaded_at), "MMM d, yyyy")}
                     </span>
                   </div>
+                  {note.description && (
+                    <p className="text-sm text-muted-foreground mt-2">{note.description}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {note.file_url && (
@@ -69,21 +102,18 @@ const Notes = () => {
                         variant="outline"
                         size="sm"
                         className="gap-2"
-                        onClick={() => window.open(note.file_url!, "_blank")}
+                        onClick={() => handleView(note.file_url!)}
                       >
                         <Eye className="w-4 h-4" />
                         View
                       </Button>
                       <Button
-                        variant="outline"
                         size="sm"
                         className="gap-2"
-                        asChild
+                        onClick={() => handleDownload(note.file_url!, note.title)}
                       >
-                        <a href={note.file_url} download>
-                          <Download className="w-4 h-4" />
-                          Download
-                        </a>
+                        <Download className="w-4 h-4" />
+                        Download
                       </Button>
                     </>
                   )}
