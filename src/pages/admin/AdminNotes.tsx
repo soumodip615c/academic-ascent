@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { BookOpen, Plus, Calendar, MoreVertical } from "lucide-react";
+import { useState, useRef } from "react";
+import { BookOpen, Plus, Calendar, MoreVertical, Upload, FileText, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +17,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNotes, useAddNote, useDeleteNote } from "@/hooks/useNotes";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 const AdminNotes = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [uploadType, setUploadType] = useState<"file" | "url">("file");
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: "",
     subject: "",
@@ -35,10 +41,56 @@ const AdminNotes = () => {
   const addNote = useAddNote();
   const deleteNote = useDeleteNote();
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Please select a PDF file");
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("File size must be less than 20MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from("notes")
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("notes")
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsUploading(true);
+
     try {
-      await addNote.mutateAsync(formData);
+      let fileUrl = formData.file_url;
+
+      if (uploadType === "file" && selectedFile) {
+        fileUrl = await uploadFile(selectedFile);
+      }
+
+      if (!fileUrl) {
+        toast.error("Please upload a PDF file or enter a URL");
+        setIsUploading(false);
+        return;
+      }
+
+      await addNote.mutateAsync({ ...formData, file_url: fileUrl });
       toast.success("Note uploaded successfully!");
       setIsDialogOpen(false);
       setFormData({
@@ -48,8 +100,12 @@ const AdminNotes = () => {
         file_url: "",
         description: "",
       });
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error: any) {
       toast.error(error.message || "Failed to upload note");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -117,15 +173,58 @@ const AdminNotes = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="file_url">File URL</Label>
-                <Input
-                  id="file_url"
-                  placeholder="https://drive.google.com/..."
-                  value={formData.file_url}
-                  onChange={(e) => setFormData({ ...formData, file_url: e.target.value })}
-                />
-              </div>
+
+              {/* Upload Type Tabs */}
+              <Tabs value={uploadType} onValueChange={(v) => setUploadType(v as "file" | "url")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="file" className="gap-2">
+                    <Upload className="w-4 h-4" />
+                    Upload PDF
+                  </TabsTrigger>
+                  <TabsTrigger value="url" className="gap-2">
+                    <LinkIcon className="w-4 h-4" />
+                    Enter URL
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="file" className="space-y-2">
+                  <Label>PDF File</Label>
+                  <div 
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    {selectedFile ? (
+                      <div className="flex items-center justify-center gap-2 text-primary">
+                        <FileText className="w-5 h-5" />
+                        <span className="font-medium">{selectedFile.name}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Click to upload PDF (max 20MB)
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </TabsContent>
+                <TabsContent value="url" className="space-y-2">
+                  <Label htmlFor="file_url">File URL</Label>
+                  <Input
+                    id="file_url"
+                    placeholder="https://drive.google.com/..."
+                    value={formData.file_url}
+                    onChange={(e) => setFormData({ ...formData, file_url: e.target.value })}
+                  />
+                </TabsContent>
+              </Tabs>
+
               <div className="space-y-2">
                 <Label htmlFor="description">Description (optional)</Label>
                 <Textarea
@@ -135,8 +234,8 @@ const AdminNotes = () => {
                   rows={3}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={addNote.isPending}>
-                {addNote.isPending ? "Uploading..." : "Upload Notes"}
+              <Button type="submit" className="w-full" disabled={isUploading || addNote.isPending}>
+                {isUploading ? "Uploading..." : "Upload Notes"}
               </Button>
             </form>
           </DialogContent>
@@ -169,6 +268,17 @@ const AdminNotes = () => {
                     <Calendar className="w-3.5 h-3.5" />
                     {format(new Date(note.uploaded_at), "MMM d, yyyy")}
                   </span>
+                  {note.file_url && (
+                    <a 
+                      href={note.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      View PDF
+                    </a>
+                  )}
                 </div>
               </div>
               <DropdownMenu>
