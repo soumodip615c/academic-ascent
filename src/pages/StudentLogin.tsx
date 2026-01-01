@@ -160,6 +160,25 @@ const StudentLogin = () => {
               >
                 {isLoading ? "Registering..." : "Register & Continue"}
               </Button>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button 
+                type="button"
+                variant="outline"
+                size="lg" 
+                className="w-full h-12"
+                onClick={() => navigate("/student-access")}
+              >
+                Already Registered? Login Here
+              </Button>
             </form>
           </CardContent>
         </Card>
