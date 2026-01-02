@@ -230,6 +230,12 @@ const AdminExams = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    navigator.clipboard.writeText(exam.id);
+                    toast.success("Exam ID copied for webhook setup!");
+                  }}>
+                    Copy Exam ID
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Edit Exam</DropdownMenuItem>
                   {exam.google_form_url && (
                     <DropdownMenuItem onClick={() => navigator.clipboard.writeText(exam.google_form_url!)}>
