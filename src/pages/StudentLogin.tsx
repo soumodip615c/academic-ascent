@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAddStudent } from "@/hooks/useStudents";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const COURSES = [
+  "BTech",
   "BCA",
   "MCA", 
   "Class 10",
@@ -28,6 +30,7 @@ const StudentLogin = () => {
   const [email, setEmail] = useState("");
   const [course, setCourse] = useState("");
   const [phone, setPhone] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,31 +38,57 @@ const StudentLogin = () => {
     setIsLoading(true);
 
     try {
+      // First, verify the access password
+      const { data: passwordSetting, error: passwordError } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "universal_access_password")
+        .maybeSingle();
+
+      if (passwordError) throw passwordError;
+
+      const universalPassword = passwordSetting?.value || "123456";
+
+      if (accessPassword !== universalPassword) {
+        toast({
+          title: "Invalid Access Password",
+          description: "Please enter the correct access password provided by your teacher.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Generate a roll number
       const rollNo = `SCW${Date.now().toString().slice(-6)}`;
       
-      await addStudent.mutateAsync({
+      const studentData = await addStudent.mutateAsync({
         name,
         email,
         course,
         phone: phone || null,
         roll_no: rollNo,
         semester: null,
-        access_password: "123456", // Default password
+        access_password: "123456",
         is_active: true
       });
 
       toast({
         title: "Registration Successful!",
-        description: "You can now login with your access password.",
+        description: "Welcome! Redirecting to your dashboard.",
       });
 
       // Store student info in session for dashboard
-      sessionStorage.setItem("studentName", name);
-      sessionStorage.setItem("studentCourse", course);
-      sessionStorage.setItem("studentEmail", email);
+      sessionStorage.setItem("student", JSON.stringify({
+        id: studentData.id,
+        name: studentData.name,
+        course: studentData.course,
+        email: studentData.email,
+        roll_no: studentData.roll_no,
+        semester: studentData.semester
+      }));
 
-      navigate("/student-access");
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Registration Failed",
@@ -152,11 +181,24 @@ const StudentLogin = () => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="accessPassword">Access Password</Label>
+                <Input
+                  id="accessPassword"
+                  type="password"
+                  placeholder="Enter access password from teacher"
+                  value={accessPassword}
+                  onChange={(e) => setAccessPassword(e.target.value)}
+                  required
+                  className="h-12"
+                />
+              </div>
+
               <Button 
                 type="submit" 
                 size="lg" 
                 className="w-full h-12"
-                disabled={isLoading || !name || !email || !course}
+                disabled={isLoading || !name || !email || !course || !accessPassword}
               >
                 {isLoading ? "Registering..." : "Register & Continue"}
               </Button>

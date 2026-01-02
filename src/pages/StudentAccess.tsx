@@ -63,11 +63,14 @@ const StudentAccess = () => {
       }
 
       // Store student data in session for dashboard
-      sessionStorage.setItem("studentId", student.id);
-      sessionStorage.setItem("studentName", student.name);
-      sessionStorage.setItem("studentCourse", student.course);
-      sessionStorage.setItem("studentEmail", student.email);
-      sessionStorage.setItem("studentRollNo", student.roll_no);
+      sessionStorage.setItem("student", JSON.stringify({
+        id: student.id,
+        name: student.name,
+        course: student.course,
+        email: student.email,
+        roll_no: student.roll_no,
+        semester: student.semester
+      }));
 
       toast({
         title: "Welcome back!",
