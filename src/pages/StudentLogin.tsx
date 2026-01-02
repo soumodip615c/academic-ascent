@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAddStudent } from "@/hooks/useStudents";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,7 +23,6 @@ const COURSES = [
 const StudentLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const addStudent = useAddStudent();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,40 +36,26 @@ const StudentLogin = () => {
     setIsLoading(true);
 
     try {
-      // First, verify the access password
-      const { data: passwordSetting, error: passwordError } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", "universal_access_password")
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("register-student", {
+        body: {
+          name,
+          email,
+          course,
+          phone: phone || null,
+          accessPassword,
+        },
+      });
 
-      if (passwordError) throw passwordError;
-
-      const universalPassword = passwordSetting?.value || "123456";
-
-      if (accessPassword !== universalPassword) {
-        toast({
-          title: "Invalid Access Password",
-          description: "Please enter the correct access password provided by your teacher.",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
+      if (error) {
+        // Try to get a friendly error message from the function response
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ctx = (error as any)?.context;
+        const body = ctx ? await ctx.json().catch(() => null) : null;
+        throw new Error(body?.error || error.message);
       }
 
-      // Generate a roll number
-      const rollNo = `SCW${Date.now().toString().slice(-6)}`;
-      
-      const studentData = await addStudent.mutateAsync({
-        name,
-        email,
-        course,
-        phone: phone || null,
-        roll_no: rollNo,
-        semester: null,
-        access_password: "123456",
-        is_active: true
-      });
+      const studentData = data?.student;
+      if (!studentData) throw new Error("Registration failed. Please try again.");
 
       toast({
         title: "Registration Successful!",
