@@ -61,6 +61,14 @@
     --warning: 38 90% 50%;
     --warning-foreground: 0 0% 100%;
 
+    /* Page Theme Colors */
+    --theme-sky: 200 85% 55%;
+    --theme-sky-light: 200 85% 96%;
+    --theme-sky-medium: 200 75% 90%;
+    --theme-brown: 25 45% 30%;
+    --theme-brown-light: 25 35% 94%;
+    --theme-brown-medium: 25 40% 88%;
+
     /* Shadows */
     --shadow-card: 0 2px 8px -2px hsl(220 25% 15% / 0.08), 0 4px 16px -4px hsl(220 25% 15% / 0.06);
     --shadow-card-hover: 0 4px 12px -2px hsl(220 25% 15% / 0.12), 0 8px 24px -4px hsl(220 25% 15% / 0.08);
@@ -205,5 +213,25 @@
   }
   .text-education-purple {
     color: hsl(var(--education-purple));
+  }
+
+  /* Page Theme Utilities */
+  .bg-theme-sky {
+    background: linear-gradient(135deg, hsl(var(--theme-sky-light)) 0%, hsl(var(--theme-sky-medium)) 100%);
+  }
+  .bg-theme-brown {
+    background: linear-gradient(135deg, hsl(var(--theme-brown-light)) 0%, hsl(var(--theme-brown-medium)) 100%);
+  }
+  .border-theme-sky {
+    border-color: hsl(var(--theme-sky) / 0.3);
+  }
+  .border-theme-brown {
+    border-color: hsl(var(--theme-brown) / 0.3);
+  }
+  .text-theme-sky {
+    color: hsl(var(--theme-sky));
+  }
+  .text-theme-brown {
+    color: hsl(var(--theme-brown));
   }
 }

@@ -29,7 +29,7 @@ const Lectures = () => {
 
   return (
     <StudentLayout>
-      <div className="animate-fade-in">
+      <div className="animate-fade-in bg-theme-brown min-h-[calc(100vh-8rem)] -mx-4 -my-8 px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">

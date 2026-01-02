@@ -5,7 +5,7 @@ import logo from "@/assets/logo.jpeg";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-theme-sky">
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="text-center max-w-md mx-auto animate-fade-in">

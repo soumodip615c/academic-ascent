@@ -51,15 +51,15 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-theme-sky flex">
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200
+        fixed inset-y-0 left-0 z-50 w-64 bg-card/95 backdrop-blur border-r border-theme-sky transform transition-transform duration-200
         lg:relative lg:translate-x-0
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}>
         {/* Logo */}
-        <div className="h-16 flex items-center gap-3 px-4 border-b border-border">
+        <div className="h-16 flex items-center gap-3 px-4 border-b border-theme-sky">
           <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
           <span className="font-heading font-semibold text-foreground text-sm">
             Admin Panel

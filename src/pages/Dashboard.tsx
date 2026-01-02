@@ -53,7 +53,7 @@ const Dashboard = () => {
     <StudentLayout>
       <div className="animate-fade-in">
         {/* Welcome Banner */}
-        <div className="bg-education-blue-light rounded-2xl p-6 md:p-8 mb-8">
+        <div className="bg-card rounded-2xl p-6 md:p-8 mb-8 border border-theme-sky shadow-card">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 bg-card rounded-xl flex items-center justify-center shadow-card">
               <User className="w-7 h-7 text-education-blue" />

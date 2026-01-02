@@ -87,7 +87,7 @@ const StudentAccess = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-education-blue-light px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-theme-sky px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         {/* Back Link */}
         <Link 
