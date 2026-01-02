@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export type Result = {
   id: string;
@@ -22,6 +23,32 @@ export type Result = {
 };
 
 export const useResults = (studentId?: string) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('results-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'results',
+        },
+        (payload) => {
+          console.log('Realtime result update:', payload);
+          // Invalidate and refetch results when any change occurs
+          queryClient.invalidateQueries({ queryKey: ["results"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, studentId]);
+
   return useQuery({
     queryKey: ["results", studentId],
     queryFn: async () => {
