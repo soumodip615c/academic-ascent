@@ -1,1 +1,7 @@
 project_id = "fmlqifzdbgsqffgiiszz"
+
+[functions.register-student]
+verify_jwt = false
+
+[functions.form-webhook]
+verify_jwt = false
