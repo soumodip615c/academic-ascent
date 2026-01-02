@@ -12,7 +12,8 @@ import {
   UserPlus,
   FileUp,
   ClipboardList,
-  Key
+  Key,
+  BarChart3
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const navItems = [
   { title: "Notes", url: "/admin/notes", icon: BookOpen },
   { title: "Lectures", url: "/admin/lectures", icon: Video },
   { title: "Exams", url: "/admin/exams", icon: FileText },
+  { title: "Results", url: "/admin/results", icon: BarChart3 },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
 ];
 
