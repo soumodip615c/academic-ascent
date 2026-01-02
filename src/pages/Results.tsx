@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BarChart3, TrendingUp, Award } from "lucide-react";
 import StudentLayout from "@/components/StudentLayout";
 import { useResults } from "@/hooks/useResults";
@@ -12,7 +13,21 @@ const getGradeColor = (percentage: number | null) => {
 };
 
 const Results = () => {
-  const { data: results = [], isLoading } = useResults();
+  const [studentId, setStudentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const studentData = sessionStorage.getItem("student");
+    if (studentData) {
+      try {
+        const student = JSON.parse(studentData);
+        setStudentId(student.id);
+      } catch {
+        setStudentId(null);
+      }
+    }
+  }, []);
+
+  const { data: results = [], isLoading } = useResults(studentId || undefined);
 
   const averagePercentage = results.length > 0
     ? Math.round(

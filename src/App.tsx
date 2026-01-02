@@ -18,6 +18,7 @@ import AdminStudents from "./pages/admin/AdminStudents";
 import AdminNotes from "./pages/admin/AdminNotes";
 import AdminLectures from "./pages/admin/AdminLectures";
 import AdminExams from "./pages/admin/AdminExams";
+import AdminResults from "./pages/admin/AdminResults";
 import AdminPayments from "./pages/admin/AdminPayments";
 import NotFound from "./pages/NotFound";
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="notes" element={<AdminNotes />} />
             <Route path="lectures" element={<AdminLectures />} />
             <Route path="exams" element={<AdminExams />} />
+            <Route path="results" element={<AdminResults />} />
             <Route path="payments" element={<AdminPayments />} />
           </Route>
           
