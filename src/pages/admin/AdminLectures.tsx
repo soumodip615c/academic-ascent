@@ -128,7 +128,7 @@ const AdminLectures = () => {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in bg-theme-brown -m-4 md:-m-6 p-4 md:p-6 min-h-[calc(100vh-4rem)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">

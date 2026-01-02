@@ -37,9 +37,9 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-theme-sky">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-theme-sky">
         <div className="container flex items-center justify-between h-16 px-4">
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-3">
