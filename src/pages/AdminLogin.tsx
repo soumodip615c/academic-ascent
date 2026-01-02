@@ -20,25 +20,35 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // Get the universal access password from settings
-      const { data: settings, error: settingsError } = await supabase
+      // Get the admin access password from settings (fallback to universal password)
+      let { data: adminSettings, error: adminError } = await supabase
         .from("settings")
         .select("value")
-        .eq("key", "universal_access_password")
-        .single();
+        .eq("key", "admin_access_password")
+        .maybeSingle();
 
-      if (settingsError || !settings) {
-        toast({
-          title: "Error",
-          description: "Access password not configured. Please contact support.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+      // If no admin password set, use universal password
+      if (!adminSettings) {
+        const { data: universalSettings, error: universalError } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("key", "universal_access_password")
+          .maybeSingle();
+        
+        if (universalError || !universalSettings) {
+          toast({
+            title: "Error",
+            description: "Access password not configured. Please contact support.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        adminSettings = universalSettings;
       }
 
       // Verify the access password
-      if (password !== settings.value) {
+      if (password !== adminSettings.value) {
         toast({
           title: "Invalid Credentials",
           description: "The access password is incorrect.",

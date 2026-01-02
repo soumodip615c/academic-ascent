@@ -29,22 +29,55 @@ export const useUniversalPassword = () => {
   });
 };
 
+export const useAdminPassword = () => {
+  return useQuery({
+    queryKey: ["admin_access_password"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "admin_access_password")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value || "123456";
+    },
+  });
+};
+
 export const useUpdateSetting = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { data, error } = await supabase
+      // Try update first, if no rows affected, insert
+      const { data: existing } = await supabase
         .from("settings")
-        .update({ value })
+        .select("id")
         .eq("key", key)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+        .maybeSingle();
+
+      if (existing) {
+        const { data, error } = await supabase
+          .from("settings")
+          .update({ value })
+          .eq("key", key)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from("settings")
+          .insert({ key, value })
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       queryClient.invalidateQueries({ queryKey: ["universal_access_password"] });
+      queryClient.invalidateQueries({ queryKey: ["admin_access_password"] });
     },
   });
 };
