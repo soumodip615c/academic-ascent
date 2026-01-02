@@ -24,7 +24,7 @@ import { useNotes } from "@/hooks/useNotes";
 import { useLectures } from "@/hooks/useLectures";
 import { useExams } from "@/hooks/useExams";
 import { useFees } from "@/hooks/useFees";
-import { useUniversalPassword, useUpdateSetting } from "@/hooks/useSettings";
+import { useUniversalPassword, useAdminPassword, useUpdateSetting } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
@@ -148,8 +148,10 @@ export const AdminOverview = () => {
   const { data: exams = [] } = useExams();
   const { data: fees = [] } = useFees();
   const { data: universalPassword = "123456" } = useUniversalPassword();
+  const { data: adminPassword = "123456" } = useAdminPassword();
   const updateSetting = useUpdateSetting();
   const [newPassword, setNewPassword] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
 
   const pendingPayments = fees.filter((f) => f.status === "pending").length;
   const activeExams = exams.filter((e) => e.status === "active" || e.status === "available").length;
@@ -196,6 +198,35 @@ export const AdminOverview = () => {
     }
   };
 
+  const handleUpdateAdminPassword = async () => {
+    if (!newAdminPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a new admin password",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await updateSetting.mutateAsync({ 
+        key: "admin_access_password", 
+        value: newAdminPassword 
+      });
+      toast({
+        title: "Success",
+        description: "Admin access password updated successfully!",
+      });
+      setNewAdminPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update admin password",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <h2 className="text-2xl font-bold text-foreground mb-6 font-heading">
@@ -207,7 +238,46 @@ export const AdminOverview = () => {
         <div className="flex items-center gap-3 mb-4">
           <div className="feature-icon-orange">
             <Key className="w-5 h-5" />
+      </div>
+
+      {/* Admin Access Password Card */}
+      <div className="card-education mb-8 border-2 border-accent/20">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="feature-icon-purple">
+            <Key className="w-5 h-5" />
           </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Admin Access Password</h3>
+            <p className="text-sm text-muted-foreground">
+              This password is required for admin login to the dashboard
+            </p>
+          </div>
+        </div>
+        
+        <div className="bg-muted/50 rounded-lg p-3 mb-4">
+          <p className="text-sm text-muted-foreground">Current Admin Password:</p>
+          <p className="font-mono text-lg font-bold text-accent">{adminPassword}</p>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Label htmlFor="newAdminPassword" className="sr-only">New Admin Password</Label>
+            <Input
+              id="newAdminPassword"
+              placeholder="Enter new admin password"
+              value={newAdminPassword}
+              onChange={(e) => setNewAdminPassword(e.target.value)}
+            />
+          </div>
+          <Button 
+            onClick={handleUpdateAdminPassword}
+            disabled={updateSetting.isPending}
+            className="bg-accent hover:bg-accent/90"
+          >
+            {updateSetting.isPending ? "Updating..." : "Update Password"}
+          </Button>
+        </div>
+      </div>
           <div>
             <h3 className="font-semibold text-foreground">Student Access Password</h3>
             <p className="text-sm text-muted-foreground">
